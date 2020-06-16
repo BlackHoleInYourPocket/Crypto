@@ -13,7 +13,7 @@ namespace Crypto.Hash
 {
     public partial class Hash : Form
     {
-        private const int BLOCK_SIZE = 32;
+        private const int BLOCK_SIZE = 16;
         private const int BLOCK_BIT_SIZE = BLOCK_SIZE * 8;
         private const int HASH_BLOCK_SIZE = BLOCK_SIZE / 4;
         private const int HASH_BLOCK_BIT_SIZE = HASH_BLOCK_SIZE * 8;
@@ -51,6 +51,9 @@ namespace Crypto.Hash
                 return;
             }
             string text = inputText.Text.Trim();
+            string binaryHash = String.Empty;
+            string lastHash = String.Empty;
+            string hash = String.Empty;
             for (int i = 0; i < text.Length; i += BLOCK_SIZE)
             {
                 string block = "";
@@ -87,10 +90,19 @@ namespace Crypto.Hash
                         return;
                     }
                 }
-                string binaryHash = CreateHash(hashBlocks);
-                string hash = BinaryToString(binaryHash);
-                hashText.Text = hash;
+                binaryHash = CreateHash(hashBlocks);
+                if (!lastHash.Equals(String.Empty))
+                {
+                    hash = XorOperator(binaryHash, lastHash);
+                }
+                else
+                {
+                    hash = binaryHash;
+                }
+                lastHash = binaryHash;
             }
+            hash = BinaryToString(hash);
+            hashText.Text = hash;
         }
 
         private string ConvertToBit(string block)
@@ -110,14 +122,56 @@ namespace Crypto.Hash
 
         private string CreateHash(List<String> hashBlocks)
         {
+            int[] shifts = new int[] { 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14,
+                20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11,
+                16, 23, 4, 11, 16, 23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21 };
             string A = hashBlocks[0];
             string B = hashBlocks[1];
             string C = hashBlocks[2];
             string D = hashBlocks[3];
-            String result = String.Empty;
-            for (int i = 0; i < 2; i++)
+            int g = 0;
+            string func = String.Empty;
+            for (int i = 0; i < 64; i++)
             {
-
+                if (i <= 15)
+                {
+                    func = OrOperator(AndOperator(B, C), AndOperator(NotOperator(B), D));
+                    g = i;
+                }
+                if (i > 15 && i <= 31)
+                {
+                    func = OrOperator(AndOperator(D, B), AndOperator(NotOperator(D), C));
+                    g = ((5 * i) + 1) % 16;
+                }
+                if (i > 31 && i <= 47)
+                {
+                    func = XorOperator(XorOperator(B, C), D);
+                    g = ((3 * i) + 5) % 16;
+                }
+                if (i > 47 && i <= 63)
+                {
+                    func = XorOperator(C, OrOperator(B, NotOperator(D)));
+                    g = ((7 * i)) % 16;
+                }
+                string tempA = A;
+                string tempB = B;
+                string tempC = C;
+                string tempD = D;
+                func = XorOperator(func, A);
+                func = XorOperator(func, HashFile[g]);
+                A = tempD;
+                D = tempC;
+                C = tempB;
+                for(int j=0; j<shifts[i]; j++)
+                {
+                    func = ShiftLeft(func);
+                }
+                B = func;
+            }
+            string result = String.Concat(A, B, C, D);
+            for(int i=0; i < Count1s(result); i++) 
+            {
+                result = ShiftLeft(result);
             }
             return result;
         }
