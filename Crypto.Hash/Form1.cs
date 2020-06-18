@@ -5,6 +5,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Crypto.Hash
@@ -17,6 +18,7 @@ namespace Crypto.Hash
         private const int HASH_BLOCK_BIT_SIZE = HASH_BLOCK_SIZE * 8;
         private List<String> HashFile = new List<string>();
         string filePath = string.Empty;
+        public int paralelcount = 0;
         public Hash()
         {
             InitializeComponent();
@@ -49,16 +51,55 @@ namespace Crypto.Hash
                 return;
             }
             string text = string.Empty;
-            using (StreamReader reader = new StreamReader(inputText.Text))
+            string result = string.Empty;
+            using (BinaryReader reader = new BinaryReader(File.Open(inputText.Text, FileMode.Open)))
             {
-                text = reader.ReadToEnd();
+                text = reader.ReadString();
                 reader.Close();
             }
+            int taskNumber = (text.Length / 100000) + 1;
+            List<String> hashresults = new List<string>();
+            List<Task> tasks = new List<Task>();
+            for (int i = 0; i < taskNumber; i++)
+            {
+                if (taskNumber - 1 == i)
+                {
+                    tasks.Add(Task.Factory.StartNew(() =>
+                    {
+                        string hash = ParallelHash(text, paralelcount * 100000, text.Length);
+                        hashresults.Add(hash);
+                    }));
+                }
+                else
+                {
+                    tasks.Add(Task.Factory.StartNew(() =>
+                    {
+                        string hash = ParallelHash(text, paralelcount * 100000, text.Length);
+                        paralelcount++;
+                        hashresults.Add(hash);
+                    }));
+                }
+            }
+
+            Task.WaitAll(tasks.ToArray());
+            result = hashresults[0];
+            for (int i = 1; i < hashresults.Count; i++)
+            {
+                result = XorOperator(result, hashresults[i]);
+            }
+            result = BinaryToString(result);
+            hashText.Text = result;
+        }
+
+        private string ParallelHash(string text, int startPos, int endPos)
+        {
             string binaryHash = String.Empty;
             string lastHash = String.Empty;
             string hash = String.Empty;
-            for (int i = 0; i < text.Length; i += BLOCK_SIZE)
+            bool flag = false;
+            for (int i = startPos; i < endPos; i += BLOCK_SIZE)
             {
+                if (flag) break;
                 string block = "";
                 try
                 {
@@ -67,17 +108,22 @@ namespace Crypto.Hash
                 catch (ArgumentOutOfRangeException)
                 {
                     block = text.Substring(i);
+                    flag = true;
                 }
                 string bit = ConvertToBit(block);
 
                 if (bit.Equals(""))
                 {
                     Message(Messages.UnexpectedError, MessagesType.Error);
-                    return;
+                    return "";
                 }
                 if (bit.Length < BLOCK_BIT_SIZE)
                 {
                     bit = bit.PadRight(BLOCK_BIT_SIZE, '0');
+                }
+                else if (bit.Length > BLOCK_BIT_SIZE)
+                {
+                    bit = bit.Substring(0, BLOCK_BIT_SIZE);
                 }
 
                 List<String> hashBlocks = new List<string>();
@@ -90,7 +136,7 @@ namespace Crypto.Hash
                     catch (Exception e)
                     {
                         Message(Messages.UnexpectedError, MessagesType.Error);
-                        return;
+                        return "";
                     }
                 }
                 binaryHash = CreateHash(hashBlocks);
@@ -104,10 +150,8 @@ namespace Crypto.Hash
                 }
                 lastHash = binaryHash;
             }
-            hash = BinaryToString(hash);
-            hashText.Text = hash;
+            return lastHash;
         }
-
         private string ConvertToBit(string block)
         {
             var builder = new StringBuilder();
