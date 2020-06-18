@@ -33,6 +33,8 @@
             this.hashLabel = new System.Windows.Forms.Label();
             this.hashText = new System.Windows.Forms.TextBox();
             this.generateButton = new System.Windows.Forms.Button();
+            this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
+            this.browseButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // inputText
@@ -73,7 +75,7 @@
             // 
             // generateButton
             // 
-            this.generateButton.Location = new System.Drawing.Point(327, 315);
+            this.generateButton.Location = new System.Drawing.Point(327, 270);
             this.generateButton.Name = "generateButton";
             this.generateButton.Size = new System.Drawing.Size(123, 49);
             this.generateButton.TabIndex = 4;
@@ -81,11 +83,26 @@
             this.generateButton.UseVisualStyleBackColor = true;
             this.generateButton.Click += new System.EventHandler(this.generateButton_Click);
             // 
+            // openFileDialog1
+            // 
+            this.openFileDialog1.FileName = "openFileDialog1";
+            // 
+            // browseButton
+            // 
+            this.browseButton.Location = new System.Drawing.Point(327, 164);
+            this.browseButton.Name = "browseButton";
+            this.browseButton.Size = new System.Drawing.Size(123, 49);
+            this.browseButton.TabIndex = 5;
+            this.browseButton.Text = "Browse";
+            this.browseButton.UseVisualStyleBackColor = true;
+            this.browseButton.Click += new System.EventHandler(this.browseButton_Click);
+            // 
             // Hash
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.browseButton);
             this.Controls.Add(this.generateButton);
             this.Controls.Add(this.hashLabel);
             this.Controls.Add(this.hashText);
@@ -106,6 +123,8 @@
         private System.Windows.Forms.Label hashLabel;
         private System.Windows.Forms.TextBox hashText;
         private System.Windows.Forms.Button generateButton;
+        private System.Windows.Forms.OpenFileDialog openFileDialog1;
+        private System.Windows.Forms.Button browseButton;
     }
 }
 

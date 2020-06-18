@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Crypto.Hash
@@ -18,6 +16,7 @@ namespace Crypto.Hash
         private const int HASH_BLOCK_SIZE = BLOCK_SIZE / 4;
         private const int HASH_BLOCK_BIT_SIZE = HASH_BLOCK_SIZE * 8;
         private List<String> HashFile = new List<string>();
+        string filePath = string.Empty;
         public Hash()
         {
             InitializeComponent();
@@ -39,7 +38,6 @@ namespace Crypto.Hash
             try
             {
                 string[] lines = File.ReadAllLines("Hash.txt");
-
                 foreach (string line in lines)
                 {
                     HashFile.Add(line);
@@ -50,7 +48,12 @@ namespace Crypto.Hash
                 Message(Messages.ReadFileError, MessagesType.Error);
                 return;
             }
-            string text = inputText.Text.Trim();
+            string text = string.Empty;
+            using (StreamReader reader = new StreamReader(inputText.Text))
+            {
+                text = reader.ReadToEnd();
+                reader.Close();
+            }
             string binaryHash = String.Empty;
             string lastHash = String.Empty;
             string hash = String.Empty;
@@ -162,14 +165,14 @@ namespace Crypto.Hash
                 A = tempD;
                 D = tempC;
                 C = tempB;
-                for(int j=0; j<shifts[i]; j++)
+                for (int j = 0; j < shifts[i]; j++)
                 {
                     func = ShiftLeft(func);
                 }
                 B = func;
             }
             string result = String.Concat(A, B, C, D);
-            for(int i=0; i < Count1s(result); i++) 
+            for (int i = 0; i < Count1s(result); i++)
             {
                 result = ShiftLeft(result);
             }
@@ -296,5 +299,13 @@ namespace Crypto.Hash
             Information = 3
         }
         #endregion
+
+        private void browseButton_Click(object sender, EventArgs e)
+        {
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                inputText.Text = openFileDialog1.FileName;
+            }
+        }
     }
 }
