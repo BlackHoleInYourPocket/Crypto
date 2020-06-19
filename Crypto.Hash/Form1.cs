@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -16,14 +17,13 @@ namespace Crypto.Hash
         private const int BLOCK_BIT_SIZE = BLOCK_SIZE * 8;
         private const int HASH_BLOCK_SIZE = BLOCK_SIZE / 4;
         private const int HASH_BLOCK_BIT_SIZE = HASH_BLOCK_SIZE * 8;
-        private List<String> HashFile = new List<string>();
+        private List<BitArray> HashFile = new List<BitArray>();
         string filePath = string.Empty;
-        public int paralelcount = 0;
+        public int paralelcount = -1;
         public Hash()
         {
             InitializeComponent();
         }
-
         private void generateButton_Click(object sender, EventArgs e)
         {
             if (inputText.Text.Equals(""))
@@ -42,7 +42,7 @@ namespace Crypto.Hash
                 string[] lines = File.ReadAllLines("Hash.txt");
                 foreach (string line in lines)
                 {
-                    HashFile.Add(line);
+                    HashFile.Add(new BitArray(line.Select(c => c == '1').ToArray()));
                 }
             }
             catch (IOException e)
@@ -50,252 +50,164 @@ namespace Crypto.Hash
                 Message(Messages.ReadFileError, MessagesType.Error);
                 return;
             }
-            string text = string.Empty;
-            string result = string.Empty;
-            using (BinaryReader reader = new BinaryReader(File.Open(inputText.Text, FileMode.Open)))
-            {
-                text = reader.ReadString();
-                reader.Close();
-            }
-            int taskNumber = (text.Length / 100000) + 1;
-            List<String> hashresults = new List<string>();
-            List<Task> tasks = new List<Task>();
-            for (int i = 0; i < taskNumber; i++)
-            {
-                if (taskNumber - 1 == i)
-                {
-                    tasks.Add(Task.Factory.StartNew(() =>
-                    {
-                        string hash = ParallelHash(text, paralelcount * 100000, text.Length);
-                        hashresults.Add(hash);
-                    }));
-                }
-                else
-                {
-                    tasks.Add(Task.Factory.StartNew(() =>
-                    {
-                        string hash = ParallelHash(text, paralelcount * 100000, text.Length);
-                        paralelcount++;
-                        hashresults.Add(hash);
-                    }));
-                }
-            }
 
-            Task.WaitAll(tasks.ToArray());
-            result = hashresults[0];
-            for (int i = 1; i < hashresults.Count; i++)
-            {
-                result = XorOperator(result, hashresults[i]);
-            }
-            result = BinaryToString(result);
+            string result = string.Empty;
+            BitArray hash = ReadBit(inputText.Text);
+            result = BinaryToString(hash);
             hashText.Text = result;
         }
-
-        private string ParallelHash(string text, int startPos, int endPos)
+        private BitArray ReadBit(string path)
         {
-            string binaryHash = String.Empty;
-            string lastHash = String.Empty;
-            string hash = String.Empty;
-            bool flag = false;
-            for (int i = startPos; i < endPos; i += BLOCK_SIZE)
+            BitArray binaryHash = null;
+            BitArray lastHash = null;
+            BitArray hash = null;
+            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
-                if (flag) break;
-                string block = "";
-                try
+                byte[] blocks;
+                BitArray bits = null;
+                using (BinaryReader br = new BinaryReader(fs, new ASCIIEncoding()))
                 {
-                    block = text.Substring(i, BLOCK_SIZE);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    block = text.Substring(i);
-                    flag = true;
-                }
-                string bit = ConvertToBit(block);
-
-                if (bit.Equals(""))
-                {
-                    Message(Messages.UnexpectedError, MessagesType.Error);
-                    return "";
-                }
-                if (bit.Length < BLOCK_BIT_SIZE)
-                {
-                    bit = bit.PadRight(BLOCK_BIT_SIZE, '0');
-                }
-                else if (bit.Length > BLOCK_BIT_SIZE)
-                {
-                    bit = bit.Substring(0, BLOCK_BIT_SIZE);
-                }
-
-                List<String> hashBlocks = new List<string>();
-                for (int j = 0; j < bit.Length; j += HASH_BLOCK_BIT_SIZE)
-                {
-                    try
+                    blocks = br.ReadBytes(BLOCK_SIZE);
+                    while (blocks.Length > 0)
                     {
-                        hashBlocks.Add(bit.Substring(j, HASH_BLOCK_BIT_SIZE));
+                        if (blocks.Length < BLOCK_SIZE)
+                        {
+                            List<byte> list = blocks.ToList();
+                            while (list.Count < BLOCK_SIZE)
+                            {
+                                list.Add(0);
+                            }
+                            blocks = new byte[list.Count];
+                            blocks = list.ToArray();
+                        }
+                        bits = new BitArray(blocks);
+                        List<BitArray> hashBlocks = new List<BitArray>();
+                        for (int j = 0; j < 4; j++)
+                        {
+                            try
+                            {
+                                BitArray addedBit = new BitArray(HASH_BLOCK_BIT_SIZE);
+                                for (int i = 0; i < HASH_BLOCK_BIT_SIZE; i++)
+                                {
+                                    addedBit[i] = bits[i + (32 * j)];
+                                }
+                                hashBlocks.Add(addedBit);
+                            }
+                            catch (Exception e)
+                            {
+                                Message(Messages.UnexpectedError, MessagesType.Error);
+                            }
+                        }
+                        binaryHash = CreateHash(hashBlocks);
+                        try
+                        {
+                            hash = binaryHash.Xor(lastHash);
+                        }
+                        catch (Exception)
+                        {
+                            hash = binaryHash;
+                        }
+                        lastHash = binaryHash;
+                        blocks = br.ReadBytes(BLOCK_SIZE);
                     }
-                    catch (Exception e)
-                    {
-                        Message(Messages.UnexpectedError, MessagesType.Error);
-                        return "";
-                    }
                 }
-                binaryHash = CreateHash(hashBlocks);
-                if (!lastHash.Equals(String.Empty))
-                {
-                    hash = XorOperator(binaryHash, lastHash);
-                }
-                else
-                {
-                    hash = binaryHash;
-                }
-                lastHash = binaryHash;
             }
-            return lastHash;
+            return hash;
         }
-        private string ConvertToBit(string block)
-        {
-            var builder = new StringBuilder();
-            try
-            {
-                foreach (char c in block)
-                    builder.Append(Convert.ToString(c, 2).PadLeft(8, '0'));
-            }
-            catch (Exception)
-            {
-                return "";
-            }
-            return builder.ToString();
-        }
-
-        private string CreateHash(List<String> hashBlocks)
+        private BitArray CreateHash(List<BitArray> hashBlocks)
         {
             int[] shifts = new int[] { 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14,
                 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11,
                 16, 23, 4, 11, 16, 23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21 };
-            string A = hashBlocks[0];
-            string B = hashBlocks[1];
-            string C = hashBlocks[2];
-            string D = hashBlocks[3];
+            BitArray A = hashBlocks[0];
+            BitArray B = hashBlocks[1];
+            BitArray C = hashBlocks[2];
+            BitArray D = hashBlocks[3];
             int g = 0;
-            string func = String.Empty;
+            BitArray func = null;
             for (int i = 0; i < 64; i++)
             {
                 if (i <= 15)
                 {
-                    func = OrOperator(AndOperator(B, C), AndOperator(NotOperator(B), D));
+                    BitArray first = B.And(C);
+                    BitArray second = B.Not().And(D);
+                    func = first.Or(second);
                     g = i;
                 }
                 if (i > 15 && i <= 31)
                 {
-                    func = OrOperator(AndOperator(D, B), AndOperator(NotOperator(D), C));
+                    BitArray first = D.And(B);
+                    BitArray second = D.Not().And(C);
+                    func = first.Or(second);
                     g = ((5 * i) + 1) % 16;
                 }
                 if (i > 31 && i <= 47)
                 {
-                    func = XorOperator(XorOperator(B, C), D);
+                    func = B.Xor(C).Xor(D);
                     g = ((3 * i) + 5) % 16;
                 }
                 if (i > 47 && i <= 63)
                 {
-                    func = XorOperator(C, OrOperator(B, NotOperator(D)));
+                    BitArray first = B.Or(D.Not());
+                    func = C.Xor(first);
                     g = ((7 * i)) % 16;
                 }
-                string tempA = A;
-                string tempB = B;
-                string tempC = C;
-                string tempD = D;
-                func = XorOperator(func, A);
-                func = XorOperator(func, HashFile[g]);
-                A = tempD;
-                D = tempC;
-                C = tempB;
-                for (int j = 0; j < shifts[i]; j++)
-                {
-                    func = ShiftLeft(func);
-                }
-                B = func;
+                func = func.Xor(A);
+                func = func.Xor(HashFile[g]);
+                A = new BitArray(D);
+                D = new BitArray(C);
+                C = new BitArray(B);
+                func = ShiftLeft(func, shifts[i]);
+                //func = func.LeftShift(shifts[i]);
+                B = new BitArray(func);
             }
-            string result = String.Concat(A, B, C, D);
-            for (int i = 0; i < Count1s(result); i++)
+            BitArray result = new BitArray(128);
+            for (int i = 0; i < 128; i++)
             {
-                result = ShiftLeft(result);
+                if (i >= 0 && i < 32) result[i] = A[i];
+                if (i >= 32 && i < 63) result[i] = B[i % 32];
+                if (i >= 64 && i < 96) result[i] = C[i % 32];
+                if (i >= 96 && i < 128) result[i] = D[i % 32];
             }
+            //result = result.LeftShift(Count1s(result));
+            result = ShiftLeft(result, Count1s(result));
             return result;
         }
-        public string BinaryToString(string data)
+        public string BinaryToString(BitArray bits)
         {
-            return string.Join("", Enumerable.Range(0, data.Length / 8)
-                        .Select(i => Convert.ToByte(data.Substring(i * 8, 8), 2)
-                        .ToString("X2")));
-        }
-        private int Count1s(string bits)
-        {
-            return bits.Count(x => x == '1');
-        }
-        private int Count0s(string bits)
-        {
-            return bits.Count(x => x == '0');
-        }
-        #endregion
+            StringBuilder sb = new StringBuilder(bits.Length / 4);
 
-        #region Operators
-        public string ShiftLeft(string data)
-        {
-            string retVal = String.Empty;
-            retVal += data[data.Length - 1];
-            for (int i = 0; i < data.Length - 1; i++)
+            for (int i = 0; i < bits.Length; i += 4)
             {
-                retVal += data[i];
-            }
-            return retVal;
-        }
-        public string ShiftRight(string data)
-        {
-            string retVal = String.Empty;
-            for (int i = 0; i < data.Length - 1; i++)
-            {
-                retVal += data[i];
-            }
-            retVal += data[data.Length - 1];
-            return retVal;
-        }
+                int v = (bits[i] ? 8 : 0) |
+                        (bits[i + 1] ? 4 : 0) |
+                        (bits[i + 2] ? 2 : 0) |
+                        (bits[i + 3] ? 1 : 0);
 
-        public string OrOperator(string first, string second)
-        {
-            string retVal = String.Empty;
-            for (int i = 0; i < first.Length; i++)
-            {
-                retVal += (char)(first.ToCharArray()[i] | second.ToCharArray()[i]);
+                sb.Append(v.ToString("x1")); // Or "X1"
             }
-            return retVal;
-        }
 
-        public string AndOperator(string first, string second)
+            String result = sb.ToString();
+            return result;
+        }
+        public BitArray ShiftLeft(BitArray data, int shiftCount)
         {
-            string retVal = String.Empty;
-            for (int i = 0; i < first.Length; i++)
+            BitArray retVal = new BitArray(data.Length);
+            for (int i = shiftCount; i < data.Length; i++)
             {
-                retVal += (char)(first.ToCharArray()[i] & second.ToCharArray()[i]);
+                retVal[i - shiftCount] = data[i];
+            }
+            for (int i = 0; i < shiftCount; i++)
+            {
+                retVal[(retVal.Length) - (shiftCount - i)] = data[i];
             }
             return retVal;
         }
-        public string XorOperator(string first, string second)
+        private int Count1s(BitArray bits)
         {
-            string or = OrOperator(first, second);
-            string and = AndOperator(first, second);
-            string andNot = NotOperator(and);
-            string orandandnot = AndOperator(or, andNot);
-            return orandandnot;
-        }
-        public string NotOperator(string data)
-        {
-            string retVal = String.Empty;
-            for (int i = 0; i < data.Length; i++)
-            {
-                if (data[i].Equals('0')) retVal += '1';
-                else retVal += 0;
-            }
-            return retVal;
+            return (from bool m in bits
+                    where m
+                    select m).Count();
         }
         #endregion
 
