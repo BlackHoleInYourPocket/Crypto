@@ -37,6 +37,7 @@ namespace Crypto.Hash
         #region Hashing
         private void StartHashing()
         {
+            startTime.Text = DateTime.Now.ToString();
             try
             {
                 string[] lines = File.ReadAllLines("Hash.txt");
@@ -55,6 +56,7 @@ namespace Crypto.Hash
             BitArray hash = ReadBit(inputText.Text);
             result = BinaryToString(hash);
             hashText.Text = result;
+            endTime.Text = DateTime.Now.ToString();
         }
         private BitArray ReadBit(string path)
         {
@@ -89,7 +91,7 @@ namespace Crypto.Hash
                                 BitArray addedBit = new BitArray(HASH_BLOCK_BIT_SIZE);
                                 for (int i = 0; i < HASH_BLOCK_BIT_SIZE; i++)
                                 {
-                                    addedBit[i] = bits[i + (32 * j)];
+                                    addedBit[i] = bits[i + (HASH_BLOCK_BIT_SIZE * j)];
                                 }
                                 hashBlocks.Add(addedBit);
                             }
@@ -101,13 +103,14 @@ namespace Crypto.Hash
                         binaryHash = CreateHash(hashBlocks);
                         try
                         {
-                            hash = binaryHash.Xor(lastHash);
+                            if (lastHash != null)
+                                hash = binaryHash.Xor(lastHash);
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
                             hash = binaryHash;
                         }
-                        lastHash = binaryHash;
+                        lastHash = ShiftLeft(binaryHash, Count1s(binaryHash));
                         blocks = br.ReadBytes(BLOCK_SIZE);
                     }
                 }
@@ -125,28 +128,29 @@ namespace Crypto.Hash
             BitArray D = hashBlocks[3];
             int g = 0;
             BitArray func = null;
-            for (int i = 0; i < 64; i++)
+            int round = 32;
+            for (int i = 0; i < round; i++)
             {
-                if (i <= 15)
+                if (i <= (round / 4) - 1)
                 {
                     BitArray first = B.And(C);
                     BitArray second = B.Not().And(D);
                     func = first.Or(second);
                     g = i;
                 }
-                if (i > 15 && i <= 31)
+                if (i > (round / 4) - 1 && i <= round / 2)
                 {
                     BitArray first = D.And(B);
                     BitArray second = D.Not().And(C);
                     func = first.Or(second);
                     g = ((5 * i) + 1) % 16;
                 }
-                if (i > 31 && i <= 47)
+                if (i > round / 2 && i <= (round / 2) + (round / 4))
                 {
                     func = B.Xor(C).Xor(D);
                     g = ((3 * i) + 5) % 16;
                 }
-                if (i > 47 && i <= 63)
+                if (i > (round / 2) + (round / 4) && i <= round)
                 {
                     BitArray first = B.Or(D.Not());
                     func = C.Xor(first);
@@ -161,13 +165,14 @@ namespace Crypto.Hash
                 //func = func.LeftShift(shifts[i]);
                 B = new BitArray(func);
             }
-            BitArray result = new BitArray(128);
-            for (int i = 0; i < 128; i++)
+            int hashLength = 128;
+            BitArray result = new BitArray(hashLength);
+            for (int i = 0; i < hashLength; i++)
             {
-                if (i >= 0 && i < 32) result[i] = A[i];
-                if (i >= 32 && i < 63) result[i] = B[i % 32];
-                if (i >= 64 && i < 96) result[i] = C[i % 32];
-                if (i >= 96 && i < 128) result[i] = D[i % 32];
+                if (i >= 0 && i < hashLength / 4) result[i] = A[i];
+                if (i >= hashLength / 4 && i < hashLength / 4) result[i] = B[i % hashLength / 4];
+                if (i >= hashLength / 4 && i < hashLength / 4) result[i] = C[i % hashLength / 4];
+                if (i >= hashLength / 4 && i < hashLength / 4) result[i] = D[i % hashLength / 4];
             }
             //result = result.LeftShift(Count1s(result));
             result = ShiftLeft(result, Count1s(result));

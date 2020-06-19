@@ -35,6 +35,8 @@
             this.generateButton = new System.Windows.Forms.Button();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.browseButton = new System.Windows.Forms.Button();
+            this.startTime = new System.Windows.Forms.TextBox();
+            this.endTime = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // inputText
@@ -97,11 +99,31 @@
             this.browseButton.UseVisualStyleBackColor = true;
             this.browseButton.Click += new System.EventHandler(this.browseButton_Click);
             // 
+            // startTime
+            // 
+            this.startTime.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
+            this.startTime.Location = new System.Drawing.Point(128, 335);
+            this.startTime.Multiline = true;
+            this.startTime.Name = "startTime";
+            this.startTime.Size = new System.Drawing.Size(246, 33);
+            this.startTime.TabIndex = 6;
+            // 
+            // endTime
+            // 
+            this.endTime.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
+            this.endTime.Location = new System.Drawing.Point(467, 335);
+            this.endTime.Multiline = true;
+            this.endTime.Name = "endTime";
+            this.endTime.Size = new System.Drawing.Size(246, 33);
+            this.endTime.TabIndex = 7;
+            // 
             // Hash
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.endTime);
+            this.Controls.Add(this.startTime);
             this.Controls.Add(this.browseButton);
             this.Controls.Add(this.generateButton);
             this.Controls.Add(this.hashLabel);
@@ -125,6 +147,8 @@
         private System.Windows.Forms.Button generateButton;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
         private System.Windows.Forms.Button browseButton;
+        private System.Windows.Forms.TextBox startTime;
+        private System.Windows.Forms.TextBox endTime;
     }
 }
 
