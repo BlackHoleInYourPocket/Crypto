@@ -13,7 +13,7 @@ namespace Crypto.Hash
 {
     public partial class Hash : Form
     {
-        private const int BLOCK_SIZE = 160;
+        private const int BLOCK_SIZE = 16;
         private const int BLOCK_BIT_SIZE = BLOCK_SIZE * 8;
         private const int HASH_BLOCK_SIZE = BLOCK_SIZE / 4;
         private const int HASH_BLOCK_BIT_SIZE = HASH_BLOCK_SIZE * 8;
