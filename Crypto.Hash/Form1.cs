@@ -53,7 +53,12 @@ namespace Crypto.Hash
             }
 
             string result = string.Empty;
-            BitArray hash = ReadBit(inputText.Text);
+            BitArray hash = null;
+            var t = Task.Factory.StartNew(() =>
+            {
+                hash = ReadBit(inputText.Text);
+            });
+            Task.WaitAll(t);
             result = BinaryToString(hash);
             hashText.Text = result;
             endTime.Text = DateTime.Now.ToString();
@@ -162,7 +167,6 @@ namespace Crypto.Hash
                 D = new BitArray(C);
                 C = new BitArray(B);
                 func = ShiftLeft(func, shifts[i]);
-                //func = func.LeftShift(shifts[i]);
                 B = new BitArray(func);
             }
             int hashLength = 128;
@@ -174,7 +178,6 @@ namespace Crypto.Hash
                 if (i >= hashLength / 4 && i < hashLength / 4) result[i] = C[i % hashLength / 4];
                 if (i >= hashLength / 4 && i < hashLength / 4) result[i] = D[i % hashLength / 4];
             }
-            //result = result.LeftShift(Count1s(result));
             result = ShiftLeft(result, Count1s(result));
             return result;
         }
