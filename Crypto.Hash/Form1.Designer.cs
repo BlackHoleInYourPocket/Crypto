@@ -37,6 +37,7 @@
             this.browseButton = new System.Windows.Forms.Button();
             this.startTime = new System.Windows.Forms.TextBox();
             this.endTime = new System.Windows.Forms.TextBox();
+            this.difTime = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // inputText
@@ -117,11 +118,21 @@
             this.endTime.Size = new System.Drawing.Size(246, 33);
             this.endTime.TabIndex = 7;
             // 
+            // difTime
+            // 
+            this.difTime.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
+            this.difTime.Location = new System.Drawing.Point(289, 374);
+            this.difTime.Multiline = true;
+            this.difTime.Name = "difTime";
+            this.difTime.Size = new System.Drawing.Size(246, 33);
+            this.difTime.TabIndex = 8;
+            // 
             // Hash
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.difTime);
             this.Controls.Add(this.endTime);
             this.Controls.Add(this.startTime);
             this.Controls.Add(this.browseButton);
@@ -149,6 +160,7 @@
         private System.Windows.Forms.Button browseButton;
         private System.Windows.Forms.TextBox startTime;
         private System.Windows.Forms.TextBox endTime;
+        private System.Windows.Forms.TextBox difTime;
     }
 }
 

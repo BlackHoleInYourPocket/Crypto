@@ -13,7 +13,7 @@ namespace Crypto.Hash
 {
     public partial class Hash : Form
     {
-        private const int BLOCK_SIZE = 16;
+        private const int BLOCK_SIZE = 160;
         private const int BLOCK_BIT_SIZE = BLOCK_SIZE * 8;
         private const int HASH_BLOCK_SIZE = BLOCK_SIZE / 4;
         private const int HASH_BLOCK_BIT_SIZE = HASH_BLOCK_SIZE * 8;
@@ -37,7 +37,8 @@ namespace Crypto.Hash
         #region Hashing
         private void StartHashing()
         {
-            startTime.Text = DateTime.Now.ToString();
+            DateTime start = DateTime.Now;
+            startTime.Text = start.ToString();
             try
             {
                 string[] lines = File.ReadAllLines("Hash.txt");
@@ -61,7 +62,9 @@ namespace Crypto.Hash
             Task.WaitAll(t);
             result = BinaryToString(hash);
             hashText.Text = result;
-            endTime.Text = DateTime.Now.ToString();
+            DateTime end = DateTime.Now;
+            endTime.Text =end.ToString();
+            difTime.Text = (end - start).ToString();
         }
         private BitArray ReadBit(string path)
         {
