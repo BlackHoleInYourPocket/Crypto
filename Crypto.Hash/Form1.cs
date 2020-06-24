@@ -13,7 +13,7 @@ namespace Crypto.Hash
 {
     public partial class Hash : Form
     {
-        private const int BLOCK_SIZE = 16;
+        private const int BLOCK_SIZE = 32;
         private const int BLOCK_BIT_SIZE = BLOCK_SIZE * 8;
         private const int HASH_BLOCK_SIZE = BLOCK_SIZE / 4;
         private const int HASH_BLOCK_BIT_SIZE = HASH_BLOCK_SIZE * 8;
@@ -37,8 +37,6 @@ namespace Crypto.Hash
         #region Hashing
         private void StartHashing()
         {
-            DateTime start = DateTime.Now;
-            startTime.Text = start.ToString();
             try
             {
                 string[] lines = File.ReadAllLines("Hash.txt");
@@ -62,9 +60,7 @@ namespace Crypto.Hash
             Task.WaitAll(t);
             result = BinaryToString(hash);
             hashText.Text = result;
-            DateTime end = DateTime.Now;
-            endTime.Text =end.ToString();
-            difTime.Text = (end - start).ToString();
+            results.Text += result + Environment.NewLine;
         }
         private BitArray ReadBit(string path)
         {
@@ -141,16 +137,16 @@ namespace Crypto.Hash
             {
                 if (i <= (round / 4) - 1)
                 {
-                    BitArray first = B.And(C);
-                    BitArray second = B.Not().And(D);
-                    func = first.Or(second);
+                    BitArray first = B.Or(C);
+                    BitArray second = B.Not().Or(D);
+                    func = first.And(second);
                     g = i;
                 }
                 if (i > (round / 4) - 1 && i <= round / 2)
                 {
-                    BitArray first = D.And(B);
-                    BitArray second = D.Not().And(C);
-                    func = first.Or(second);
+                    BitArray first = D.Or(B);
+                    BitArray second = D.Not().Or(C);
+                    func = first.And(second);
                     g = ((5 * i) + 1) % 16;
                 }
                 if (i > round / 2 && i <= (round / 2) + (round / 4))
@@ -160,7 +156,7 @@ namespace Crypto.Hash
                 }
                 if (i > (round / 2) + (round / 4) && i <= round)
                 {
-                    BitArray first = B.Or(D.Not());
+                    BitArray first = B.And(D.Not());
                     func = C.Xor(first);
                     g = ((7 * i)) % 16;
                 }
@@ -172,17 +168,8 @@ namespace Crypto.Hash
                 func = ShiftLeft(func, shifts[i]);
                 B = new BitArray(func);
             }
-            int hashLength = 128;
-            BitArray result = new BitArray(hashLength);
-            for (int i = 0; i < hashLength; i++)
-            {
-                if (i >= 0 && i < hashLength / 4) result[i] = A[i];
-                if (i >= hashLength / 4 && i < hashLength / 4) result[i] = B[i % hashLength / 4];
-                if (i >= hashLength / 4 && i < hashLength / 4) result[i] = C[i % hashLength / 4];
-                if (i >= hashLength / 4 && i < hashLength / 4) result[i] = D[i % hashLength / 4];
-            }
-            result = ShiftLeft(result, Count1s(result));
-            return result;
+            A = ShiftLeft(A, Count1s(A));
+            return A;
         }
         public string BinaryToString(BitArray bits)
         {
